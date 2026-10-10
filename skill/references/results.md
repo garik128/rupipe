@@ -84,6 +84,6 @@ All settings are in `scripts/config.yaml` with comments. Do not edit that file f
 | `mix.voice_db_min`, `mix.voice_db_max` | -10, 6 | limits for the automatic level, relative to the studio balance |
 | `mix.variants.<name>.duck_db` | auto | ducking of the centre under the voice: `auto` copies the studio, or a number like -6 |
 | `export.track_names.<variant>` | "Русский 5.1 (закадр)" | name of the new track |
-| `export.bitrate` | 1024k | E-AC3 bitrate (1024k is the safe maximum for most players and receivers) |
+| `export.bitrate` | 1024k | E-AC3 bitrate. Higher than the source on purpose: this is a second encode with ffmpeg's simpler encoder; at the source bitrate the added distortion at 8-14 kHz is only ~11 dB below the signal, at 1024k ~28 dB. 1024k is also the safe maximum for most players and receivers. If the user asks why the track is "bigger than the original", explain this. |
 | `fragments.length_s` | 90 | fragment length |
 | `tracks.files` | - | per-file track choice, like `--track-for`: `{"E05": "3"}` or `{"E05": {"russian": "3"}}` |
