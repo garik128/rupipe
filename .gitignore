@@ -1,0 +1,30 @@
+# Settings and notes of one machine (see docs/development.md)
+config.local.yaml
+AGENTS.local.md
+
+# Media and results: never part of the repository
+samples/
+work/
+out/
+rupipe-out/
+dist/
+*.mkv
+*.mka
+*.mp4
+*.wav
+*.flac
+*.ac3
+*.eac3
+*.dts
+*.thd
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+build/
+
+# Anything named *.local.* stays on this machine
+*.local.*

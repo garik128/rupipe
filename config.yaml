@@ -1,0 +1,110 @@
+# Default settings. Machine-specific settings go to config.local.yaml next to this file
+# (loaded automatically, not shared). Per run: pipeline --config other.yaml <command> ...
+# Override files only need the keys they change.
+
+# A full path to the program, or just its name to look it up in PATH.
+tools:
+  ffmpeg: ffmpeg
+  ffprobe: ffprobe
+  mkvmerge: mkvmerge
+
+# Temporary files: <work_dir>/<input name>/. Empty: <input folder>/rupipe-out/work.
+# The global option --out <folder> overrides work_dir, output_dir and fragments.dir.
+work_dir:
+
+tracks:
+  # Nothing is guessed when there is a choice: if a track is not given and
+  # there are several candidates, `pipeline run` prints the plan and stops.
+  # Give a track here or per run with --original / --russian: a track number
+  # (ffprobe index) or a part of the track title (titles are stable across a
+  # season, numbers often are not).
+  # original auto: the track with the most channels, if exactly one non-Russian
+  # track has that many.
+  original: auto
+  # russian auto: only when the file has a single track besides the original.
+  russian: auto
+
+sync:
+  # Dense measurement: a GCC-PHAT window every step_s. Windows that agree form
+  # segments with one offset; Russian tracks assembled from pieces get several.
+  window_s: 8
+  step_s: 4
+  max_lag_s: 2.0               # search range around the container offset
+  min_confidence: 3.0          # peak / second-peak ratio; weaker windows are ignored
+  run_tolerance_samples: 1.0   # windows within this of each other share a segment
+  refine_window_s: 2           # boundary search between two segments
+  refine_step_s: 0.25
+  crossfade_ms: 20             # at segment joins in the aligned Russian track
+  max_segments: 12             # more than this: flagged as probable continuous drift
+
+# Finished files (MKV with the new tracks). Empty: <input folder>/rupipe-out.
+output_dir:
+
+voice:
+  n_fft: 4096
+  block_s: 60
+  ridge: 0.001              # regularisation of the downmix fit, relative to channel power
+  gain_smooth_frames: 11    # time smoothing of the studio gain, in STFT hops (~21 ms each)
+  leak_percentile: 20       # how the residual leak level is estimated (lower = less aggressive)
+  oversubtract: 2.0         # leak suppression strength
+  mask_floor_db: -20        # deepest per-bin suppression of the leak
+  vad_ratio: 3.0            # voice-band energy over the expected leak to count as voice
+  vad_min_db: -65           # absolute floor for voice, dBFS mean square
+  hangover_ms: 250
+  gate_floor_db: -25        # voice level between phrases
+  gate_attack_ms: 10
+  gate_release_ms: 200
+
+mix:
+  # Each variant becomes its own E-AC3 track.
+  #   voice_db:       voice level relative to the studio's voice/original balance, in dB,
+  #                   or auto: the quietest level at which the voice is audible over the
+  #                   rest of the mix (ducked centre + other channels) in target_audible
+  #                   share of its time-frequency cells; measured per file (audibility.py)
+  #   target_audible: per-variant override of mix.target_audible
+  #   duck_db:        ducking under the voice; auto = depth measured in the studio track
+  #   duck_channels:  channels that are ducked (the voice always goes to FC)
+  # A fixed voice_db is not universal: studios balance the voice differently and
+  # mixes differ in density. On a new studio, give the user the alternatives below
+  # to compare by ear (separate --config, see README).
+  variants:
+    main:
+      voice_db: auto
+      duck_db: auto
+      duck_channels: [FC]
+    # louder:
+    #   voice_db: auto
+    #   target_audible: 0.92
+    #   duck_db: auto
+    #   duck_channels: [FC]
+    # quieter:
+    #   voice_db: auto
+    #   target_audible: 0.85
+    #   duck_db: auto
+    #   duck_channels: [FC]
+    # studio:
+    #   voice_db: 0
+    #   duck_db: auto
+    #   duck_channels: [FC]
+  # Calibrated by ear (on a soundbar) on two studios: liked at 88-90%,
+  # "English masks Russian" at 79-86%, "voice too loud" at 92-95%.
+  target_audible: 0.89
+  voice_db_min: -10            # auto never goes below / above these, relative to the studio balance
+  voice_db_max: 6
+  duck_attack_ms: 60
+  duck_release_ms: 400
+  ceiling_dbfs: -1.0        # sample-peak ceiling; a short limiter acts only above it
+
+export:
+  bitrate: 1024k
+  dialnorm: auto            # auto = same as the original track, or a number -31..-1
+  track_names:
+    main: "Русский 5.1 (закадр)"
+    louder: "Русский 5.1 (закадр, голос громче)"
+    quieter: "Русский 5.1 (закадр, голос тише)"
+    studio: "Русский 5.1 (закадр, баланс студии)"
+  default_variant: main
+
+fragments:
+  length_s: 90
+  dir:                       # empty: <input folder>/rupipe-out/listen
