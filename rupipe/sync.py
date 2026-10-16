@@ -97,7 +97,14 @@ def _window_lag(orig: Reader, ru: Reader, pos: int, window: int, lag0: int, max_
     y = ru(pos - lag0 - max_lag, window + 2 * max_lag)
     if np.sqrt(np.mean(x ** 2)) < 1e-5 or np.sqrt(np.mean(y ** 2)) < 1e-5:
         return None, 0.0
-    k, frac, conf = _peak(gcc_phat(x, y, sr))
+    r = gcc_phat(x, y, sr)
+    k, frac, conf = _peak(r)
+    # A peak on the very edge of the search range is not a measurement: the true offset is
+    # outside it or there is nothing to correlate (quiet stretch). Seen on a near-silent
+    # montage: three windows "confidently" at exactly +max_lag, which put the Russian voice
+    # 2 s off the picture.
+    if k <= 1 or k >= len(r) - 2:
+        return None, 0.0
     return lag0 + max_lag - (k + frac), conf
 
 
@@ -109,6 +116,21 @@ def _score_at(orig: Reader, ru: Reader, pos: int, window: int, lag: float, sr: i
     if np.sqrt(np.mean(x ** 2)) < 1e-5:
         return 0.0
     return float(gcc_phat(x, y, sr)[8])
+
+
+def distinct_offsets(lags: list[float], tol: float) -> int:
+    """How many really different offsets a list of segment lags holds.
+
+    Consecutive lags within `tol` samples of the first lag of the current group count as one:
+    measurements of the same offset can alternate by about a sample from window to window.
+    A real drift walks away from the group's first lag and is counted.
+    """
+    count, anchor = 0, None
+    for lag in lags:
+        if anchor is None or abs(lag - anchor) > tol:
+            count += 1
+            anchor = lag
+    return count
 
 
 def measure_map(orig: Reader, ru: Reader, n_orig: int, lag0: int, scfg: dict,
@@ -186,9 +208,11 @@ def measure_map(orig: Reader, ru: Reader, n_orig: int, lag0: int, scfg: dict,
     edges = [0] + bounds + [n_orig]
     segments = [{"start": edges[i], "end": edges[i + 1], "lag": round(lags[i], 3),
                  "windows": len(runs[i])} for i in range(len(runs))]
-    flagged = len(segments) > scfg["max_segments"]
+    distinct = distinct_offsets(lags, float(scfg.get("flag_tolerance_samples", 2.0)))
+    flagged = distinct > scfg["max_segments"]
     result.update(
         segments=segments,
+        distinct_offsets=distinct,
         flagged=flagged,
         reason=("too many offset changes: probably continuous drift, which piecewise alignment "
                 "only approximates") if flagged else "",

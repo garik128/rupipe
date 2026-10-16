@@ -260,7 +260,9 @@ def summary_text(cfg: dict, files: list[Path], failed: list[Path]) -> str:
         sy = m.result("sync")
         segs = sy["segments"]
         line = f"  {f.name}: sync {len(segs)} segment(s)"
+        distinct = sy.get("distinct_offsets", len(segs))
         if len(segs) > 1:
+            line += f" ({distinct} distinct offset(s))"
             line += " [" + ", ".join(f"{s['lag']:.0f}" for s in segs) + " samples]"
         if sy.get("flagged"):
             line += " FLAGGED: " + sy.get("reason", "")
@@ -271,14 +273,14 @@ def summary_text(cfg: dict, files: list[Path], failed: list[Path]) -> str:
                      f"voice {v['voice_seconds'] / 60:.0f} min")
         if m.done("mix"):
             mx = m.result("mix")
-            lim = sum(st["samples_limited"] for var in mx["variants"].values()
-                      for st in var["stats"].values())
             main = mx["variants"].get(cfg["export"]["default_variant"]) or next(iter(mx["variants"].values()))
+            lim = sum(st["samples_limited"] for st in main["stats"].values())
+            total = m.result("analyze")["duration"] * decode.SAMPLE_RATE * max(1, len(main["stats"]))
             if main.get("audible") is not None and mx.get("studio_audible") is not None:
                 line += (f"; voice audible {main['audible'] * 100:.0f}% (studio {mx['studio_audible'] * 100:.0f}%), "
                          f"voice {main['voice_db']:+.1f} dB to studio, "
                          f"over centre {main['voice_over_original_db']:+.1f} dB")
-            line += f"; limited {lim} samples"
+            line += f"; limited {lim} samples ({lim / total * 100:.2f}% of the changed channels)"
         lines.append(line)
     return "\n".join(lines)
 

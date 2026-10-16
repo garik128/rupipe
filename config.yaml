@@ -35,7 +35,8 @@ sync:
   refine_window_s: 2           # boundary search between two segments
   refine_step_s: 0.25
   crossfade_ms: 20             # at segment joins in the aligned Russian track
-  max_segments: 12             # more than this: flagged as probable continuous drift
+  flag_tolerance_samples: 2.0  # segment offsets this close count as one when deciding whether to flag
+  max_segments: 12             # more than this many distinct offsets: flagged as probable continuous drift
 
 # Finished files (MKV with the new tracks). Empty: <input folder>/rupipe-out.
 output_dir:
@@ -104,6 +105,7 @@ export:
     quieter: "Русский 5.1 (закадр, голос тише)"
     studio: "Русский 5.1 (закадр, баланс студии)"
   default_variant: main
+  studio_in_name: true      # append the title of the chosen Russian source track (the studio) to the new track name
 
 fragments:
   length_s: 90

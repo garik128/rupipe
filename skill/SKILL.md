@@ -94,10 +94,10 @@ At the end `run` prints a `SUMMARY` line per file. Go through it and tell the us
 
 | in SUMMARY | fine | tell the user |
 |---|---|---|
-| `sync N segment(s)` | 1, or a few | many segments, or `FLAGGED` |
+| `sync N segment(s) (K distinct offset(s))` | K = 1, or a few | many distinct offsets, or `FLAGGED` |
 | `leak ... worst` | -10 dB or lower | -5 dB or higher (check the track choice) |
 | `voice audible N%` | close to the target (89%) | warning "target audibility not reached" in the log |
-| `limited` | up to tens of thousands | hundreds of thousands (offer a fragment to check) |
+| `limited N samples (X%)` | up to tens of thousands, hundredths of a percent | hundreds of thousands, or tenths of a percent and more (offer a fragment to check) |
 | `FAILED` | - | always, with the error from the log |
 
 Finished files: `rupipe-out/<name>.rus51.mkv`. Tell the user where they are and that `rupipe-out/work` can be deleted.
@@ -109,7 +109,7 @@ pipeline doctor                                    check the environment
 pipeline plan <folder|file> [choice options]       show tracks and the plan, process nothing
 pipeline run  <folder|file> [choice options]       build; prints SUMMARY at the end
 pipeline run  <file> --from mix                    redo the mix (after changing voice level settings)
-pipeline fragments <file> [--count 3] [--at HH:MM:SS] [--length 90]
+pipeline fragments <file> [--count 3] [--at HH:MM:SS] [--length 90]   (give the SOURCE file, not the finished .rus51.mkv)
 choice options: --russian X  --original X  --track-for NAME=X
 global options (before the command): --out <folder>  --config <override.yaml>
 ```

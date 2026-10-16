@@ -1,7 +1,7 @@
 import numpy as np
 
 from rupipe.probe import parse_dialnorm
-from rupipe.sync import frac_shift, measure_map
+from rupipe.sync import distinct_offsets, frac_shift, measure_map
 
 SR = 48000
 SYNC_CFG = {"window_s": 8, "step_s": 4, "max_lag_s": 0.5, "min_confidence": 3.0,
@@ -76,6 +76,30 @@ def test_sync_finds_a_jump_in_the_offset():
     assert len(segs) == 2
     assert abs(segs[0]["lag"] + 1021) < 0.1 and abs(segs[1]["lag"] + 1026) < 0.1
     assert abs(segs[1]["start"] / SR - 60) < 0.5
+    assert res["distinct_offsets"] == 2
+
+
+def test_distinct_offsets_ignores_jitter_of_about_a_sample():
+    # A long file measured as one offset can still split into many segments whose lags differ by
+    # about a sample; that is not drift and must not be flagged.
+    jitter = [-571.65, -573.08, -571.65, -572.68, -571.71, -572.72] * 3
+    assert distinct_offsets(jitter, 2.0) == 1
+
+
+def test_distinct_offsets_counts_a_real_drift():
+    # Each segment is a few samples further than the last: the group anchor is left behind.
+    drift = [-570.0 - 3.0 * i for i in range(14)]
+    assert distinct_offsets(drift, 2.0) == 14
+    assert distinct_offsets([-1021.0, -1026.0, -1021.0], 2.0) == 3
+
+
+def test_sync_ignores_a_peak_on_the_edge_of_the_search_range():
+    # The middle piece is offset beyond max_lag (0.5 s): the correlation peak lands on the
+    # edge of the range. It must not become a segment at exactly +-max_lag.
+    edge = int(SYNC_CFG["max_lag_s"] * SR)
+    res = _case([(0, -1021), (50, -1021 + edge + 4000), (80, -1021)], lag0=0, seconds=120)
+    for seg in res["segments"]:
+        assert abs(abs(seg["lag"]) - edge) > 50
 
 
 def test_frac_shift_matches_analytic_delay():

@@ -58,9 +58,15 @@ def mux(cfg: dict, src: Path, analysis: dict, encoded: dict, work: Path) -> dict
     for s in analysis["streams"]:
         cmd += ["--default-track-flag", f"{s['index']}:no"]
     cmd += [src]
+    studio = ""
+    if ecfg.get("studio_in_name", True) and analysis.get("russian") is not None:
+        studio = (by_index[analysis["russian"]].get("title") or "").strip()
     for name, f in encoded["files"].items():
         default = "yes" if name == ecfg["default_variant"] else "no"
-        cmd += ["--language", "0:rus", "--track-name", f"0:{ecfg['track_names'].get(name, name)}",
+        title = ecfg["track_names"].get(name, name)
+        if studio:
+            title = f"{title} - {studio}"
+        cmd += ["--language", "0:rus", "--track-name", f"0:{title}",
                 "--default-track-flag", f"0:{default}"]
         if delay_ms:
             cmd += ["--sync", f"0:{delay_ms}"]
